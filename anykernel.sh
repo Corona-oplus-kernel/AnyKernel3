@@ -2,7 +2,6 @@
 
 AKHOME="$(dirname "$(readlink -f "$0")")"
 AK_IMG="$AKHOME/Image/Image"
-AK_MODULE="$AKHOME/module/Corona.zip"
 properties() { '
 kernel.string=KernelSU by KernelSU Developers
 do.devicecheck=0
@@ -34,8 +33,8 @@ detect_key_press() {
     while true; do
         key=$(getevent -qlc 1 2>/dev/null | awk '{print $3}')
         case "$key" in
-            "KEY_VOLUMEUP") return 0 ;;
-            "KEY_VOLUMEDOWN") return 1 ;;
+            "KEY_VOLUMEUP") sleep 1; return 0 ;;
+            "KEY_VOLUMEDOWN") sleep 1; return 1 ;;
         esac
         sleep 0.2
     done
@@ -52,14 +51,30 @@ process_boot() {
 }
 
 install_module() {
-    local module_name="$1"
-    local module_file="$2"
+    local module_file="$1"
+    local module_name
+    local module_desc
+    module_name="$(basename "$module_file" .zip)"
+    module_desc="$module_name"
     
     [ -f "$module_file" ] || {
         ui_print "未找到 ${module_name} 模块文件"
         return 1
     }
-    
+
+    if command -v unzip >/dev/null 2>&1; then
+        module_desc="$(unzip -p "$module_file" module.prop 2>/dev/null | sed -n 's/^description=//p' | head -n 1)"
+    fi
+    [ -n "$module_desc" ] || module_desc="$module_name"
+
+    ui_print "──────────────────"
+    ui_print "模块: ${module_name}"
+    ui_print "介绍: ${module_desc}"
+    if ! detect_key_press "是否安装 ${module_name} 模块？" "安装" "跳过"; then
+        ui_print "已跳过 ${module_name} 模块"
+        return 0
+    fi
+
     ui_print "正在安装 ${module_name} 模块..."
     KSUD="/data/adb/ksud"
     if [ -x "$KSUD" ]; then
@@ -69,23 +84,6 @@ install_module() {
     else
         ui_print "错误: 找不到ksud可执行文件"
         return 1
-    fi
-}
-
-install_Corona() {
-    [ -f "$AK_MODULE" ] || {
-        ui_print "──────────────────"
-        ui_print "未找到Corona内核系统设置模块文件"
-        return
-    }
-    
-    ui_print "──────────────────"
-    ui_print "正在检查Corona内核系统设置模块安装选项..."
-    ui_print "没需求不需要安装🌝"
-    if detect_key_press "是否安装Corona内核系统设置模块？" "安装" "跳过"; then
-        install_module "Corona" "$AK_MODULE"
-    else
-        ui_print "已跳过Corona内核系统设置模块安装"
     fi
 }
 
@@ -109,8 +107,11 @@ main() {
         write_boot || abort "boot刷入失败"
     fi
     
-    install_Corona
-    ui_print ""
+    for module_file in "$AKHOME"/module/*.zip; do
+        [ -f "$module_file" ] || continue
+        install_module "$module_file"
+    done
+
     ui_print "刷写完成"
     ui_print "请重启设备以应用更改"
 }
