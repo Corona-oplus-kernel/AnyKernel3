@@ -111,7 +111,6 @@ flash_boot() {
   [ "$(wc -c < boot-new.img)" -gt "$(wc -c < boot.img)" ] && abort "New image larger than partition.";
   blockdev --setrw $block 2>/dev/null;
   cat boot-new.img /dev/zero > $block 2>/dev/null || true;
-  [ $? != 0 ] && abort "Flashing image failed.";
 }
 
 flash_generic() {
@@ -161,7 +160,6 @@ flash_generic() {
   isro=$(blockdev --getro $imgblock 2>/dev/null);
   blockdev --setrw $imgblock 2>/dev/null;
   cat $img /dev/zero > $imgblock 2>/dev/null || true;
-  [ $? != 0 ] && abort "Flashing $1 failed.";
   [ "$isro" != 0 ] && blockdev --setro $imgblock 2>/dev/null;
   [ "$isunmounted" ] && { $bin/httools_static mount $1 || abort "Mounting $1 failed."; }
   touch ${1}_flashed;

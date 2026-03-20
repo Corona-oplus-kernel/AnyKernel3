@@ -102,7 +102,7 @@ main() {
     cp "$AK_IMG" "$split_img/kernel"
     
     if [ -L "/dev/block/bootdevice/by-name/init_boot_a" ] || [ -L "/dev/block/by-name/init_boot_a" ]; then
-        flash_boot || abort "init_boot刷入失败"
+        flash_boot
     else
         write_boot || abort "boot刷入失败"
     fi
