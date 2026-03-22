@@ -1,7 +1,0 @@
-#!/bin/bash
-
-trap '[ $? -ne 0 ] && echo "执行失败！请确保在MT扩展包环境中执行"' EXIT
-
-encoded_script="IyEvYmluL2Jhc2gKCnBhcnQxPSJodHRwczovLyIKcGFydDI9ImIyMy50di8iCnBhcnQzPSJjaDZiRnVwIgoKZnVsbF91cmw9IiR7cGFydDF9JHtwYXJ0Mn0ke3BhcnQzfSIKCmlmIFtbICIkT1NUWVBFIiA9PSAibGludXgtYW5kcm9pZCIqIF1dOyB0aGVuCiAgICBpZiBwbSBsaXN0IHBhY2thZ2VzIHwgZ3JlcCAtcSAidHYuZGFubWFrdS5iaWxpIjsgdGhlbgogICAgICAgIGFtIHN0YXJ0IC1hIGFuZHJvaWQuaW50ZW50LmFjdGlvbi5WSUVXIC1kICIkZnVsbF91cmwiIHR2LmRhbm1ha3UuYmlsaQogICAgICAgIGV4aXQgMAogICAgZmkKZmkKCnhkZy1vcGVuICIkZnVsbF91cmwiIHx8IG9wZW4gIiRmdWxsX3VybCIgfHwgc3RhcnQgIiRmdWxsX3VybCI="
-
-eval "$(echo "$encoded_script" | base64 -d)"
