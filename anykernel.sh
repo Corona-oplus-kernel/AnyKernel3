@@ -42,9 +42,11 @@ detect_key_press() {
 
 process_boot() {
     if [ -L "/dev/block/bootdevice/by-name/init_boot_a" ] || [ -L "/dev/block/by-name/init_boot_a" ]; then
+        block=init_boot
         ui_print "检测到 init_boot 分区..."
-        split_boot
+        dump_boot
     else
+        block=boot
         ui_print "检测到 boot 分区..."
         dump_boot
     fi
