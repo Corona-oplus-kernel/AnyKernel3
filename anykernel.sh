@@ -49,8 +49,14 @@ prepare_boot_image() {
             ;;
         *)
             ui_print "检测到 boot 分区..."
-            dump_boot
-            BOOT_WRITE_METHOD=write_boot
+            split_boot
+            if [ -f "$split_img/ramdisk.cpio" ] || [ -f "$split_img/ramdisk.cpio.gz" ]; then
+                unpack_ramdisk
+                BOOT_WRITE_METHOD=write_boot
+            else
+                ui_print "未检测到 ramdisk，直接刷写内核镜像"
+                BOOT_WRITE_METHOD=flash_boot
+            fi
             ;;
     esac
 }
