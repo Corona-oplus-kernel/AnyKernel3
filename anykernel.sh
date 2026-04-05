@@ -41,15 +41,14 @@ detect_key_press() {
 }
 
 process_boot() {
-    if [ -L "/dev/block/bootdevice/by-name/init_boot_a" ] || [ -L "/dev/block/by-name/init_boot_a" ]; then
+    if find_blk init_boot_a init_boot_b init_boot >/dev/null; then
         block=init_boot
         ui_print "检测到 init_boot 分区..."
-        dump_boot
     else
         block=boot
         ui_print "检测到 boot 分区..."
-        dump_boot
     fi
+    dump_boot
 }
 
 install_module() {
@@ -58,7 +57,7 @@ install_module() {
     local module_desc
     module_name="$(basename "$module_file" .zip)"
     module_desc="$module_name"
-    
+
     [ -f "$module_file" ] || {
         ui_print "未找到 ${module_name} 模块文件"
         return 1
@@ -98,17 +97,20 @@ main() {
     ui_print ""
     ui_print "▶ Installing..."
     ui_print "──────────────────"
-    
+
     process_boot
-    
+
     cp "$AK_IMG" "$split_img/kernel"
-    
-    if [ -L "/dev/block/bootdevice/by-name/init_boot_a" ] || [ -L "/dev/block/by-name/init_boot_a" ]; then
-        flash_boot
-    else
-        write_boot || abort "boot刷入失败"
-    fi
-    
+
+    case "$(basename "$block")" in
+        init_boot*)
+            flash_boot || abort "init_boot刷入失败"
+            ;;
+        *)
+            write_boot || abort "boot刷入失败"
+            ;;
+    esac
+
     for module_file in "$AKHOME"/module/*.zip; do
         [ -f "$module_file" ] || continue
         install_module "$module_file"
