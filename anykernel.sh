@@ -41,13 +41,16 @@ detect_key_press() {
 }
 
 process_boot() {
-    if find_blk init_boot_a init_boot_b init_boot >/dev/null; then
-        ui_print "检测到 init_boot 分区..."
-        split_boot
-    else
-        ui_print "检测到 boot 分区..."
-        dump_boot
-    fi
+    case "$(basename "$block")" in
+        init_boot*)
+            ui_print "检测到 init_boot 分区..."
+            split_boot
+            ;;
+        *)
+            ui_print "检测到 boot 分区..."
+            dump_boot
+            ;;
+    esac
 }
 
 install_module() {
@@ -101,11 +104,14 @@ main() {
 
     cp "$AK_IMG" "$split_img/kernel"
 
-    if find_blk init_boot_a init_boot_b init_boot >/dev/null; then
-        flash_boot || abort "boot刷入失败"
-    else
-        write_boot || abort "boot刷入失败"
-    fi
+    case "$(basename "$block")" in
+        init_boot*)
+            flash_boot || abort "boot刷入失败"
+            ;;
+        *)
+            write_boot || abort "boot刷入失败"
+            ;;
+    esac
 
     for module_file in "$AKHOME"/module/*.zip; do
         [ -f "$module_file" ] || continue
