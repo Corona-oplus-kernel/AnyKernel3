@@ -19,7 +19,7 @@ supported.patchlevels=
 supported.vendorpatchlevels=
 '; }
 
-block=boot
+block=auto
 is_slot_device=auto
 ramdisk_compression=auto
 patch_vbmeta_flag=auto
