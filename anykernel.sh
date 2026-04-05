@@ -116,6 +116,9 @@ main() {
     ui_print ""
     ui_print "▶ Installing..."
     ui_print "──────────────────"
+    ui_print "内核版本: $(uname -r)"
+    ui_print "使用修补工具: 原始内核镜像"
+    ui_print "──────────────────"
 
     prepare_boot_image
 
