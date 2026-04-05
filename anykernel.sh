@@ -40,15 +40,25 @@ detect_key_press() {
     done
 }
 
-process_boot() {
-    case "$(basename "$block")" in
-        init_boot*)
-            ui_print "检测到 init_boot 分区..."
-            split_boot
+prepare_boot_image() {
+    split_boot
+    if [ -f "$split_img/ramdisk.cpio" ] || [ -f "$split_img/ramdisk.cpio.gz" ]; then
+        ui_print "检测到 boot 分区..."
+        unpack_ramdisk
+        BOOT_WRITE_METHOD=write_boot
+    else
+        ui_print "检测到 init_boot 分区..."
+        BOOT_WRITE_METHOD=flash_boot
+    fi
+}
+
+flash_selected_boot() {
+    case "$BOOT_WRITE_METHOD" in
+        flash_boot)
+            flash_boot || abort "boot刷入失败"
             ;;
         *)
-            ui_print "检测到 boot 分区..."
-            dump_boot
+            write_boot || abort "boot刷入失败"
             ;;
     esac
 }
@@ -81,9 +91,7 @@ install_module() {
     ui_print "正在安装 ${module_name} 模块..."
     KSUD="/data/adb/ksud"
     if [ -x "$KSUD" ]; then
-        "$KSUD" module install "$module_file" && \
-        ui_print "${module_name} 模块安装成功" || \
-        ui_print "${module_name} 模块安装失败"
+        "$KSUD" module install "$module_file" &&         ui_print "${module_name} 模块安装成功" ||         ui_print "${module_name} 模块安装失败"
     else
         ui_print "错误: 找不到ksud可执行文件"
         return 1
@@ -100,18 +108,11 @@ main() {
     ui_print "▶ Installing..."
     ui_print "──────────────────"
 
-    process_boot
+    prepare_boot_image
 
     cp "$AK_IMG" "$split_img/kernel"
 
-    case "$(basename "$block")" in
-        init_boot*)
-            flash_boot || abort "boot刷入失败"
-            ;;
-        *)
-            write_boot || abort "boot刷入失败"
-            ;;
-    esac
+    flash_selected_boot
 
     for module_file in "$AKHOME"/module/*.zip; do
         [ -f "$module_file" ] || continue
