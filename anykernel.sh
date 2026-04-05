@@ -41,13 +41,14 @@ detect_key_press() {
 }
 
 process_boot() {
-    if find_blk init_boot_a init_boot_b init_boot >/dev/null; then
-        block=init_boot
-        ui_print "检测到 init_boot 分区..."
-    else
-        block=boot
-        ui_print "检测到 boot 分区..."
-    fi
+    case "$(basename "$block")" in
+        init_boot*)
+            ui_print "检测到 init_boot 分区..."
+            ;;
+        *)
+            ui_print "检测到 boot 分区..."
+            ;;
+    esac
     dump_boot
 }
 
