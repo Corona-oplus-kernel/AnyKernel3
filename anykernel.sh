@@ -19,7 +19,7 @@ supported.patchlevels=
 supported.vendorpatchlevels=
 '; }
 
-block=auto
+block=boot
 is_slot_device=auto
 ramdisk_compression=auto
 patch_vbmeta_flag=auto
@@ -41,15 +41,13 @@ detect_key_press() {
 }
 
 process_boot() {
-    case "$(basename "$block")" in
-        init_boot*)
-            ui_print "检测到 init_boot 分区..."
-            ;;
-        *)
-            ui_print "检测到 boot 分区..."
-            ;;
-    esac
-    dump_boot
+    if find_blk init_boot_a init_boot_b init_boot >/dev/null; then
+        ui_print "检测到 init_boot 分区..."
+        split_boot
+    else
+        ui_print "检测到 boot 分区..."
+        dump_boot
+    fi
 }
 
 install_module() {
@@ -103,14 +101,11 @@ main() {
 
     cp "$AK_IMG" "$split_img/kernel"
 
-    case "$(basename "$block")" in
-        init_boot*)
-            flash_boot || abort "init_boot刷入失败"
-            ;;
-        *)
-            write_boot || abort "boot刷入失败"
-            ;;
-    esac
+    if find_blk init_boot_a init_boot_b init_boot >/dev/null; then
+        flash_boot || abort "boot刷入失败"
+    else
+        write_boot || abort "boot刷入失败"
+    fi
 
     for module_file in "$AKHOME"/module/*.zip; do
         [ -f "$module_file" ] || continue
