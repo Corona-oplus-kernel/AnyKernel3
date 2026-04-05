@@ -40,8 +40,12 @@ detect_key_press() {
     done
 }
 
-process_boot() {
-    case "$(basename "$block")" in
+boot_target_name() {
+    basename "$block"
+}
+
+prepare_boot_image() {
+    case "$(boot_target_name)" in
         init_boot*)
             ui_print "检测到 init_boot 分区..."
             split_boot
@@ -49,6 +53,17 @@ process_boot() {
         *)
             ui_print "检测到 boot 分区..."
             dump_boot
+            ;;
+    esac
+}
+
+flash_selected_boot() {
+    case "$(boot_target_name)" in
+        init_boot*)
+            flash_boot || abort "boot刷入失败"
+            ;;
+        *)
+            write_boot || abort "boot刷入失败"
             ;;
     esac
 }
@@ -100,18 +115,11 @@ main() {
     ui_print "▶ Installing..."
     ui_print "──────────────────"
 
-    process_boot
+    prepare_boot_image
 
     cp "$AK_IMG" "$split_img/kernel"
 
-    case "$(basename "$block")" in
-        init_boot*)
-            flash_boot || abort "boot刷入失败"
-            ;;
-        *)
-            write_boot || abort "boot刷入失败"
-            ;;
-    esac
+    flash_selected_boot
 
     for module_file in "$AKHOME"/module/*.zip; do
         [ -f "$module_file" ] || continue
