@@ -57,12 +57,14 @@ prepare_boot_image() {
 }
 
 flash_selected_boot() {
+    ui_print "目标分区: $block"
+    ui_print "刷写方式: $BOOT_WRITE_METHOD"
     case "$BOOT_WRITE_METHOD" in
         flash_boot)
-            flash_boot || abort "boot刷入失败"
+            flash_boot
             ;;
         *)
-            write_boot || abort "boot刷入失败"
+            write_boot
             ;;
     esac
 }
