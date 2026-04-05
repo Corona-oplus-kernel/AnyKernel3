@@ -41,15 +41,18 @@ detect_key_press() {
 }
 
 prepare_boot_image() {
-    split_boot
-    if [ -f "$split_img/ramdisk.cpio" ] || [ -f "$split_img/ramdisk.cpio.gz" ]; then
-        ui_print "检测到 boot 分区..."
-        unpack_ramdisk
-        BOOT_WRITE_METHOD=write_boot
-    else
-        ui_print "检测到 init_boot 分区..."
-        BOOT_WRITE_METHOD=flash_boot
-    fi
+    case "$(basename "$block")" in
+        init_boot*)
+            ui_print "检测到 init_boot 分区..."
+            split_boot
+            BOOT_WRITE_METHOD=flash_boot
+            ;;
+        *)
+            ui_print "检测到 boot 分区..."
+            dump_boot
+            BOOT_WRITE_METHOD=write_boot
+            ;;
+    esac
 }
 
 flash_selected_boot() {
