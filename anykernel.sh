@@ -42,18 +42,14 @@ detect_key_press() {
 
 prepare_boot_image() {
     split_boot
-    case "$(basename "$block")" in
-        init_boot*)
-            ui_print "检测到 init_boot 分区..."
-            ;;
-        *)
-            ui_print "检测到 boot 分区..."
-            if [ ! -f "$split_img/ramdisk.cpio" ] && [ ! -f "$split_img/ramdisk.cpio.gz" ]; then
-                ui_print "未检测到 ramdisk，直接刷写内核镜像"
-            fi
-            ;;
-    esac
-    BOOT_WRITE_METHOD=flash_boot
+    if [ -f "$split_img/ramdisk.cpio" ] || [ -f "$split_img/ramdisk.cpio.gz" ]; then
+        ui_print "检测到 boot 分区..."
+        unpack_ramdisk
+        BOOT_WRITE_METHOD=write_boot
+    else
+        ui_print "检测到 init_boot 分区..."
+        BOOT_WRITE_METHOD=flash_boot
+    fi
 }
 
 flash_selected_boot() {
@@ -65,6 +61,88 @@ flash_selected_boot() {
             write_boot
             ;;
     esac
+}
+
+apply_kpn() {
+    local kptools="$AKHOME/patch/kptools"
+    local kpimg="$AKHOME/patch/kpimg"
+
+    ui_print "使用修补工具: KP-N"
+    ui_print "──────────────────"
+
+    for retry in $(seq 1 3); do
+        ui_print "KP-N补丁尝试 ($retry/3)"
+        ui_print "没需求不需要安装🙄"
+
+        if detect_key_press "应用KP-N补丁？" "是" "否"; then
+            TMPD=$(mktemp -d) || continue
+            cp "$AK_IMG" "$kptools" "$kpimg" "$TMPD/" && cd "$TMPD" || {
+                rm -rf "$TMPD"
+                continue
+            }
+
+            chmod +x kptools
+            if ./kptools -p -i "$(basename "$AK_IMG")" -k kpimg -o oImage && [ -f "oImage" ]; then
+                mv oImage "$split_img/kernel"
+                ui_print "KP-N补丁应用成功"
+                rm -rf "$TMPD"
+                return 0
+            fi
+            rm -rf "$TMPD"
+        else
+            return 1
+        fi
+    done
+    ui_print "警告: KP-N补丁应用失败"
+    return 1
+}
+
+apply_kpm() {
+    local patch_bin="$AKHOME/patch/patch"
+
+    ui_print "使用修补工具: KPM (5_15+)"
+    ui_print "──────────────────"
+
+    for retry in $(seq 1 3); do
+        ui_print "KPM补丁尝试 ($retry/3)"
+        ui_print "没需求不需要安装🙄"
+
+        if detect_key_press "应用KPM补丁？" "是" "否"; then
+            TMPD=$(mktemp -d) || continue
+            cp "$AK_IMG" "$patch_bin" "$TMPD/" && cd "$TMPD" || {
+                rm -rf "$TMPD"
+                continue
+            }
+
+            chmod +x patch
+            if ./patch && [ -f "oImage" ]; then
+                mv oImage "$split_img/kernel"
+                ui_print "KPM补丁应用成功"
+                rm -rf "$TMPD"
+                return 0
+            fi
+            rm -rf "$TMPD"
+        else
+            return 1
+        fi
+    done
+    ui_print "警告: KPM补丁应用失败"
+    return 1
+}
+
+apply_patch() {
+    ui_print "内核版本: $(uname -r)"
+
+    if [ -f "$AKHOME/patch/kptools" ] && [ -f "$AKHOME/patch/kpimg" ]; then
+        apply_kpn && return
+    elif [ -f "$AKHOME/patch/patch" ]; then
+        apply_kpm && return
+    else
+        ui_print "使用修补工具: 原始内核镜像"
+    fi
+
+    cp "$AK_IMG" "$split_img/kernel"
+    ui_print "使用原始内核镜像"
 }
 
 install_module() {
@@ -95,7 +173,9 @@ install_module() {
     ui_print "正在安装 ${module_name} 模块..."
     KSUD="/data/adb/ksud"
     if [ -x "$KSUD" ]; then
-        "$KSUD" module install "$module_file" &&         ui_print "${module_name} 模块安装成功" ||         ui_print "${module_name} 模块安装失败"
+        "$KSUD" module install "$module_file" && \
+            ui_print "${module_name} 模块安装成功" || \
+            ui_print "${module_name} 模块安装失败"
     else
         ui_print "错误: 找不到ksud可执行文件"
         return 1
@@ -111,13 +191,9 @@ main() {
     ui_print ""
     ui_print "▶ Installing..."
     ui_print "──────────────────"
-    ui_print "内核版本: $(uname -r)"
-    ui_print "使用修补工具: 原始内核镜像"
-    ui_print "──────────────────"
 
     prepare_boot_image
-
-    cp "$AK_IMG" "$split_img/kernel"
+    apply_patch
 
     flash_selected_boot
 
